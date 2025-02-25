@@ -326,6 +326,11 @@ static void close_file(channel_t* channel, file_data* fdata) {
             if (written == 0 || written < (size_t)encoded)
                 log(LOG_WARNING, "Problem writing %s (%s)\n", fdata->file_path.c_str(), strerror(errno));
         }
+
+        // write the lametag to the beginning of the file
+        const int lametag_size = lame_get_lametag_frame(channel->lame, channel->lamebuf, LAMEBUF_SIZE);
+        fseek(fdata->f, 0, SEEK_SET);
+        fwrite(channel->lamebuf, 1, lametag_size, fdata->f);
     }
 
     if (fdata->f) {

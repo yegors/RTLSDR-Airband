@@ -183,6 +183,10 @@ struct output_t {
     bool enabled;
     bool active;
     void* data;
+
+    // set if this output performs mp3 encoding
+    lame_t lame;
+    unsigned char* lamebuf;  // temporary buffer used for lame encoding
 };
 
 struct freq_tag {
@@ -250,16 +254,13 @@ struct channel_t {
     struct freq_t* freqlist;
     int freq_count;
     int freq_idx;
-    int need_mp3;
     int needs_raw_iq;
     int has_iq_outputs;
     enum ch_states state;  // mixer channel state flag
     int output_count;
     output_t* outputs;
-    int highpass;            // highpass filter cutoff
-    int lowpass;             // lowpass filter cutoff
-    lame_t lame;             // Context for LAME MP3 encoding if needed
-    unsigned char* lamebuf;  // Buffer used by each lame encode
+    int highpass;  // highpass filter cutoff
+    int lowpass;   // lowpass filter cutoff
 };
 
 enum rec_modes { R_MULTICHANNEL, R_SCAN };

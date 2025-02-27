@@ -5,7 +5,7 @@ PROJECT_GIT_DIR_PATH="${PROJECT_ROOT_PATH}/.git"
 PROJECT_DIR_NAME="$(basename ${PROJECT_ROOT_PATH})"
 
 # if there is a .git directory at the project root then rely on git for the version string
-if [ -d "${PROJECT_GIT_DIR_PATH}" ] ; then
+if [ -f "${PROJECT_GIT_DIR_PATH}" ] ; then
     git describe --tags --abbrev --dirty --always
     exit 0
 fi

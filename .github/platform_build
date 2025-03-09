@@ -13,6 +13,9 @@ case "${platform}" in
     rpi3b)
         CMAKE_ARGS="-DPLATFORM=rpiv2 -DCMAKE_BUILD_TYPE=Release -DNFM=TRUE -DBUILD_UNITTESTS=TRUE"
         ;;
+    ubuntu-22.04-arm)
+        CMAKE_ARGS="-DPLATFORM=native -DCMAKE_BUILD_TYPE=Release -DNFM=TRUE -DBUILD_UNITTESTS=TRUE"
+        ;;
 
     *)
         echo "Error: Platform '${platform}' not supported"

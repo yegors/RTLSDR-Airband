@@ -34,6 +34,9 @@ using namespace std;
 static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, int j, bool parsing_mixers) {
     int oo = 0;
     for (int o = 0; o < channel->output_count; o++) {
+        channel->outputs[oo].lame = NULL;
+        channel->outputs[oo].lamebuf = NULL;
+
         if (outs[o].exists("disable") && (bool)outs[o]["disable"] == true) {
             continue;
         }
@@ -91,7 +94,9 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
                 idata->tls_mode = SHOUT_TLS_DISABLED;
             }
 #endif /* LIBSHOUT_HAS_TLS */
-            channel->need_mp3 = 1;
+
+            channel->outputs[oo].lame = airlame_init(channel->mode, channel->highpass, channel->lowpass);
+            channel->outputs[oo].lamebuf = (unsigned char*)malloc(sizeof(unsigned char) * LAMEBUF_SIZE);
         } else if (!strncmp(outs[o]["type"], "file", 4)) {
             channel->outputs[oo].data = XCALLOC(1, sizeof(struct file_data));
             channel->outputs[oo].type = O_FILE;
@@ -116,7 +121,9 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             fdata->append = (!outs[o].exists("append")) || (bool)(outs[o]["append"]);
             fdata->split_on_transmission = outs[o].exists("split_on_transmission") ? (bool)(outs[o]["split_on_transmission"]) : false;
             fdata->include_freq = outs[o].exists("include_freq") ? (bool)(outs[o]["include_freq"]) : false;
-            channel->need_mp3 = 1;
+
+            channel->outputs[oo].lame = airlame_init(channel->mode, channel->highpass, channel->lowpass);
+            channel->outputs[oo].lamebuf = (unsigned char*)malloc(sizeof(unsigned char) * LAMEBUF_SIZE);
 
             if (fdata->split_on_transmission) {
                 if (parsing_mixers) {
@@ -316,13 +323,10 @@ static int parse_channels(libconfig::Setting& chans, device_t* dev, int i) {
         }
         channel->axcindicate = NO_SIGNAL;
         channel->mode = MM_MONO;
-        channel->need_mp3 = 0;
         channel->freq_count = 1;
         channel->freq_idx = 0;
         channel->highpass = chans[j].exists("highpass") ? (int)chans[j]["highpass"] : 100;
         channel->lowpass = chans[j].exists("lowpass") ? (int)chans[j]["lowpass"] : 2500;
-        channel->lame = NULL;
-        channel->lamebuf = NULL;
 #ifdef NFM
         channel->pr = 0;
         channel->pj = 0;

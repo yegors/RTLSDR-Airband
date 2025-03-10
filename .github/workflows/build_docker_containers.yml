@@ -12,6 +12,11 @@ on:
 jobs:
   build_docker_containers:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     steps:
     - name: Runner Info
       run: printenv | sort

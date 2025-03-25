@@ -34,6 +34,7 @@ using namespace std;
 static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, int j, bool parsing_mixers) {
     int oo = 0;
     for (int o = 0; o < channel->output_count; o++) {
+        channel->outputs[oo].has_mp3_output = false;
         channel->outputs[oo].lame = NULL;
         channel->outputs[oo].lamebuf = NULL;
 
@@ -95,8 +96,7 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             }
 #endif /* LIBSHOUT_HAS_TLS */
 
-            channel->outputs[oo].lame = airlame_init(channel->mode, channel->highpass, channel->lowpass);
-            channel->outputs[oo].lamebuf = (unsigned char*)malloc(sizeof(unsigned char) * LAMEBUF_SIZE);
+            channel->outputs[oo].has_mp3_output = true;
         } else if (!strncmp(outs[o]["type"], "file", 4)) {
             channel->outputs[oo].data = XCALLOC(1, sizeof(struct file_data));
             channel->outputs[oo].type = O_FILE;
@@ -122,8 +122,7 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             fdata->split_on_transmission = outs[o].exists("split_on_transmission") ? (bool)(outs[o]["split_on_transmission"]) : false;
             fdata->include_freq = outs[o].exists("include_freq") ? (bool)(outs[o]["include_freq"]) : false;
 
-            channel->outputs[oo].lame = airlame_init(channel->mode, channel->highpass, channel->lowpass);
-            channel->outputs[oo].lamebuf = (unsigned char*)malloc(sizeof(unsigned char) * LAMEBUF_SIZE);
+            channel->outputs[oo].has_mp3_output = true;
 
             if (fdata->split_on_transmission) {
                 if (parsing_mixers) {

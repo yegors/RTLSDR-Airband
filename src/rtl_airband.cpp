@@ -265,6 +265,24 @@ void init_demod(demod_params_t* params, Signal* signal, int device_start, int de
 #endif /* WITH_BCM_VC */
 }
 
+bool init_output(channel_t* channel, output_t* output) {
+    if (output->type == O_ICECAST) {
+        shout_setup((icecast_data*)(output->data), channel->mode);
+    } else if (output->type == O_UDP_STREAM) {
+        udp_stream_data* sdata = (udp_stream_data*)(output->data);
+        if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
+            return false;
+        }
+#ifdef WITH_PULSEAUDIO
+    } else if (output->type == O_PULSE) {
+        pulse_init();
+        pulse_setup((pulse_data*)(output->data), channel->mode);
+#endif /* WITH_PULSEAUDIO */
+    }
+
+    return true;
+}
+
 void init_output_params(output_params_t* params, int device_start, int device_end, int mixer_start, int mixer_end) {
     assert(params != NULL);
 
@@ -949,19 +967,9 @@ int main(int argc, char* argv[]) {
         channel_t* channel = &mixers[i].channel;
         for (int k = 0; k < channel->output_count; k++) {
             output_t* output = channel->outputs + k;
-            if (output->type == O_ICECAST) {
-                shout_setup((icecast_data*)(output->data), channel->mode);
-            } else if (output->type == O_UDP_STREAM) {
-                udp_stream_data* sdata = (udp_stream_data*)(output->data);
-                if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
-                    cerr << "Failed to initialize mixer " << i << " output " << k << " - aborting\n";
-                    error();
-                }
-#ifdef WITH_PULSEAUDIO
-            } else if (output->type == O_PULSE) {
-                pulse_init();
-                pulse_setup((pulse_data*)(output->data), channel->mode);
-#endif /* WITH_PULSEAUDIO */
+            if (!init_output(channel, output)) {
+                cerr << "Failed to initialize mixer " << i << " output " << k << " - aborting\n";
+                error();
             }
         }
     }
@@ -972,19 +980,9 @@ int main(int argc, char* argv[]) {
 
             for (int k = 0; k < channel->output_count; k++) {
                 output_t* output = channel->outputs + k;
-                if (output->type == O_ICECAST) {
-                    shout_setup((icecast_data*)(output->data), channel->mode);
-                } else if (output->type == O_UDP_STREAM) {
-                    udp_stream_data* sdata = (udp_stream_data*)(output->data);
-                    if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
-                        cerr << "Failed to initialize device " << i << " channel " << j << " output " << k << " - aborting\n";
-                        error();
-                    }
-#ifdef WITH_PULSEAUDIO
-                } else if (output->type == O_PULSE) {
-                    pulse_init();
-                    pulse_setup((pulse_data*)(output->data), channel->mode);
-#endif /* WITH_PULSEAUDIO */
+                if (!init_output(channel, output)) {
+                    cerr << "Failed to initialize device " << i << " channel " << j << " output " << k << " - aborting\n";
+                    error();
                 }
             }
         }

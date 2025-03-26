@@ -265,7 +265,29 @@ void init_demod(demod_params_t* params, Signal* signal, int device_start, int de
 #endif /* WITH_BCM_VC */
 }
 
-void init_output(output_params_t* params, int device_start, int device_end, int mixer_start, int mixer_end) {
+bool init_output(channel_t* channel, output_t* output) {
+    if (output->has_mp3_output) {
+        output->lame = airlame_init(channel->mode, channel->highpass, channel->lowpass);
+        output->lamebuf = (unsigned char*)malloc(sizeof(unsigned char) * LAMEBUF_SIZE);
+    }
+    if (output->type == O_ICECAST) {
+        shout_setup((icecast_data*)(output->data), channel->mode);
+    } else if (output->type == O_UDP_STREAM) {
+        udp_stream_data* sdata = (udp_stream_data*)(output->data);
+        if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
+            return false;
+        }
+#ifdef WITH_PULSEAUDIO
+    } else if (output->type == O_PULSE) {
+        pulse_init();
+        pulse_setup((pulse_data*)(output->data), channel->mode);
+#endif /* WITH_PULSEAUDIO */
+    }
+
+    return true;
+}
+
+void init_output_params(output_params_t* params, int device_start, int device_end, int mixer_start, int mixer_end) {
     assert(params != NULL);
 
     params->mp3_signal = new Signal;
@@ -949,19 +971,9 @@ int main(int argc, char* argv[]) {
         channel_t* channel = &mixers[i].channel;
         for (int k = 0; k < channel->output_count; k++) {
             output_t* output = channel->outputs + k;
-            if (output->type == O_ICECAST) {
-                shout_setup((icecast_data*)(output->data), channel->mode);
-            } else if (output->type == O_UDP_STREAM) {
-                udp_stream_data* sdata = (udp_stream_data*)(output->data);
-                if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
-                    cerr << "Failed to initialize mixer " << i << " output " << k << " - aborting\n";
-                    error();
-                }
-#ifdef WITH_PULSEAUDIO
-            } else if (output->type == O_PULSE) {
-                pulse_init();
-                pulse_setup((pulse_data*)(output->data), channel->mode);
-#endif /* WITH_PULSEAUDIO */
+            if (!init_output(channel, output)) {
+                cerr << "Failed to initialize mixer " << i << " output " << k << " - aborting\n";
+                error();
             }
         }
     }
@@ -972,19 +984,9 @@ int main(int argc, char* argv[]) {
 
             for (int k = 0; k < channel->output_count; k++) {
                 output_t* output = channel->outputs + k;
-                if (output->type == O_ICECAST) {
-                    shout_setup((icecast_data*)(output->data), channel->mode);
-                } else if (output->type == O_UDP_STREAM) {
-                    udp_stream_data* sdata = (udp_stream_data*)(output->data);
-                    if (!udp_stream_init(sdata, channel->mode, (size_t)WAVE_BATCH * sizeof(float))) {
-                        cerr << "Failed to initialize device " << i << " channel " << j << " output " << k << " - aborting\n";
-                        error();
-                    }
-#ifdef WITH_PULSEAUDIO
-                } else if (output->type == O_PULSE) {
-                    pulse_init();
-                    pulse_setup((pulse_data*)(output->data), channel->mode);
-#endif /* WITH_PULSEAUDIO */
+                if (!init_output(channel, output)) {
+                    cerr << "Failed to initialize device " << i << " channel " << j << " output " << k << " - aborting\n";
+                    error();
                 }
             }
         }
@@ -1055,7 +1057,7 @@ int main(int argc, char* argv[]) {
 
     // Setup the output and demod threads
     if (multiple_output_threads == false) {
-        init_output(&output_params[0], 0, device_count, 0, mixer_count);
+        init_output_params(&output_params[0], 0, device_count, 0, mixer_count);
 
         if (multiple_demod_threads == false) {
             init_demod(&demod_params[0], output_params[0].mp3_signal, 0, device_count);
@@ -1066,16 +1068,16 @@ int main(int argc, char* argv[]) {
         }
     } else {
         if (multiple_demod_threads == false) {
-            init_output(&output_params[0], 0, device_count, 0, 0);
+            init_output_params(&output_params[0], 0, device_count, 0, 0);
             init_demod(&demod_params[0], output_params[0].mp3_signal, 0, device_count);
         } else {
             for (int i = 0; i < device_count; i++) {
-                init_output(&output_params[i], i, i + 1, 0, 0);
+                init_output_params(&output_params[i], i, i + 1, 0, 0);
                 init_demod(&demod_params[i], output_params[i].mp3_signal, i, i + 1);
             }
         }
         if (mixer_count > 0) {
-            init_output(&output_params[output_thread_count - 1], 0, 0, 0, mixer_count);
+            init_output_params(&output_params[output_thread_count - 1], 0, 0, 0, mixer_count);
         }
     }
 

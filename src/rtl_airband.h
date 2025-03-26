@@ -184,9 +184,14 @@ struct output_t {
     bool active;
     void* data;
 
-    // set if this output performs mp3 encoding
+    // set to true in order to initialize `lame` and `lamebuf` after config parsing
+    // is complete
+    bool has_mp3_output;
+
+    // lame encoder and buffer for mp3 output. initialized after config parsing
+    // if `uses_mp3_output` is true
     lame_t lame;
-    unsigned char* lamebuf;  // temporary buffer used for lame encoding
+    unsigned char* lamebuf;
 };
 
 struct freq_tag {

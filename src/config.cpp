@@ -229,6 +229,43 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
                 cerr << "missing dest_port\n";
                 error();
             }
+        } else if (!strncmp(outs[o]["type"], "srt", 3)) {
+            channel->outputs[oo].data = XCALLOC(1, sizeof(struct srt_stream_data));
+            channel->outputs[oo].type = O_SRT;
+
+            srt_stream_data* sdata = (srt_stream_data*)channel->outputs[oo].data;
+
+            sdata->continuous = outs[o].exists("continuous") ? (bool)(outs[o]["continuous"]) : false;
+
+            if (outs[o].exists("listen_address")) {
+                sdata->listen_address = strdup(outs[o]["listen_address"]);
+            } else {
+                if (parsing_mixers) {
+                    cerr << "Configuration error: mixers.[" << i << "] outputs.[" << o << "]: ";
+                } else {
+                    cerr << "Configuration error: devices.[" << i << "] channels.[" << j << "] outputs.[" << o << "]: ";
+                }
+                cerr << "missing listen_address\n";
+                error();
+            }
+
+            if (outs[o].exists("listen_port")) {
+                if (outs[o]["listen_port"].getType() == libconfig::Setting::TypeInt) {
+                    char buffer[12];
+                    sprintf(buffer, "%d", (int)outs[o]["listen_port"]);
+                    sdata->listen_port = strdup(buffer);
+                } else {
+                    sdata->listen_port = strdup(outs[o]["listen_port"]);
+                }
+            } else {
+                if (parsing_mixers) {
+                    cerr << "Configuration error: mixers.[" << i << "] outputs.[" << o << "]: ";
+                } else {
+                    cerr << "Configuration error: devices.[" << i << "] channels.[" << j << "] outputs.[" << o << "]: ";
+                }
+                cerr << "missing listen_port\n";
+                error();
+            }
 #ifdef WITH_PULSEAUDIO
         } else if (!strncmp(outs[o]["type"], "pulse", 5)) {
             channel->outputs[oo].data = XCALLOC(1, sizeof(struct pulse_data));

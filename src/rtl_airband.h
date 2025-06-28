@@ -30,6 +30,7 @@
 #include <cstdio>
 #include <libconfig.h++>
 #include <string>
+#include <vector>
 
 #include "config.h"
 
@@ -43,6 +44,9 @@
 #include <pulse/context.h>
 #include <pulse/stream.h>
 #endif /* WITH_PULSEAUDIO */
+#ifdef WITH_SRT
+#include <srt/srt.h>
+#endif /* WITH_SRT */
 
 #include "filters.h"
 #include "input-common.h"  // input_t
@@ -106,7 +110,8 @@ enum output_type {
     O_FILE,
     O_RAWFILE,
     O_MIXER,
-    O_UDP_STREAM
+    O_UDP_STREAM,
+    O_SRT
 #ifdef WITH_PULSEAUDIO
     ,
     O_PULSE
@@ -157,6 +162,19 @@ struct udp_stream_data {
     int send_socket;
     struct sockaddr dest_sockaddr;
     socklen_t dest_sockaddr_len;
+};
+
+struct srt_stream_data {
+    float* stereo_buffer;
+    size_t stereo_buffer_len;
+
+    bool continuous;
+    const char* listen_address;
+    const char* listen_port;
+
+    SRTSOCKET listen_socket;
+    int ep_id;
+    std::vector<SRTSOCKET> clients;
 };
 
 #ifdef WITH_PULSEAUDIO
@@ -393,6 +411,12 @@ bool udp_stream_init(udp_stream_data* sdata, mix_modes mode, size_t len);
 void udp_stream_write(udp_stream_data* sdata, const float* data, size_t len);
 void udp_stream_write(udp_stream_data* sdata, const float* data_left, const float* data_right, size_t len);
 void udp_stream_shutdown(udp_stream_data* sdata);
+
+// srt_stream.cpp
+bool srt_stream_init(srt_stream_data* sdata, mix_modes mode, size_t len);
+void srt_stream_write(srt_stream_data* sdata, const float* data, size_t len);
+void srt_stream_write(srt_stream_data* sdata, const float* data_left, const float* data_right, size_t len);
+void srt_stream_shutdown(srt_stream_data* sdata);
 
 #ifdef WITH_PULSEAUDIO
 #define PULSE_STREAM_LATENCY_LIMIT 10000000UL

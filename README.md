@@ -39,6 +39,19 @@ When building with CMake leave the `-DSRT` option enabled (default) and
 ensure that `pkg-config` can locate the `srt` library. If the library is
 missing the build system will automatically disable SRT support.
 
+### SRT streaming
+
+By default audio sent via the `srt` output is raw 32‑bit float PCM at
+8&nbsp;kHz. A typical client is `ffplay`:
+
+```
+ffplay -ac 1 -ar 8000 -analyzeduration 0 -probesize 32 -f f32le srt://<host>:<port>
+```
+
+Setting `format = "mp3"` on the output encodes the audio using libmp3lame
+before sending it. In this mode standard players (including VLC) can open
+`srt://<host>:<port>` directly without specifying any parameters.
+
 ## Credits and thanks
 
 I hereby express my gratitude to everybody who helped with the development and testing

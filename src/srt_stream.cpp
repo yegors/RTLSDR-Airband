@@ -9,6 +9,7 @@
 #ifdef WITH_SRT
 
 static bool srt_initialized = false;
+static void srt_stream_accept(srt_stream_data* sdata);
 
 static void srt_try_startup() {
     if (!srt_initialized) {
@@ -16,7 +17,39 @@ static void srt_try_startup() {
             log(LOG_ERR, "srt_stream: srt_startup failed: %s\n", srt_getlasterror_str());
         } else {
             srt_initialized = true;
+            /* Reduce noise from libsrt by only logging errors */
+            srt_setloglevel(LOG_ERR);
         }
+    }
+}
+
+static void srt_stream_send(srt_stream_data* sdata, const char* data, size_t len) {
+    if (sdata->listen_socket == SRT_INVALID_SOCK)
+        return;
+
+    srt_stream_accept(sdata);
+    for (auto it = sdata->clients.begin(); it != sdata->clients.end();) {
+        const char* ptr = data;
+        size_t remaining = len;
+        while (remaining > 0) {
+            int chunk = remaining > (size_t)sdata->payload_size ? sdata->payload_size : remaining;
+            int ret = srt_send(*it, ptr, chunk);
+            if (ret == SRT_ERROR) {
+                int serr;
+                srt_getlasterror(&serr);
+                if (serr != SRT_EASYNCSND) {
+                    srt_close(*it);
+                    it = sdata->clients.erase(it);
+                    goto next_client;
+                }
+            }
+            ptr += chunk;
+            remaining -= chunk;
+        }
+        ++it;
+        continue;
+    next_client:
+        ;
     }
 }
 
@@ -26,7 +59,7 @@ bool srt_stream_init(srt_stream_data* sdata, mix_modes mode, size_t len) {
         return false;
     }
 
-    if (mode == MM_STEREO) {
+    if (!sdata->mp3 && mode == MM_STEREO) {
         sdata->stereo_buffer_len = (len / sizeof(float)) * 2;
         sdata->stereo_buffer = (float*)XCALLOC(sdata->stereo_buffer_len, sizeof(float));
     } else {
@@ -93,33 +126,11 @@ static void srt_stream_accept(srt_stream_data* sdata) {
 }
 
 void srt_stream_write(srt_stream_data* sdata, const float* data, size_t len) {
-    if (sdata->listen_socket == SRT_INVALID_SOCK)
-        return;
+    srt_stream_send(sdata, (const char*)data, len);
+}
 
-    srt_stream_accept(sdata);
-    for (auto it = sdata->clients.begin(); it != sdata->clients.end();) {
-        const char* ptr = (const char*)data;
-        size_t remaining = len;
-        while (remaining > 0) {
-            int chunk = remaining > (size_t)sdata->payload_size ? sdata->payload_size : remaining;
-            int ret = srt_send(*it, ptr, chunk);
-            if (ret == SRT_ERROR) {
-                int serr;
-                srt_getlasterror(&serr);
-                if (serr != SRT_EASYNCSND) {
-                    srt_close(*it);
-                    it = sdata->clients.erase(it);
-                    goto next_client;
-                }
-            }
-            ptr += chunk;
-            remaining -= chunk;
-        }
-        ++it;
-        continue;
-    next_client:
-        ;
-    }
+void srt_stream_send_bytes(srt_stream_data* sdata, const unsigned char* data, size_t len) {
+    srt_stream_send(sdata, (const char*)data, len);
 }
 
 void srt_stream_write(srt_stream_data* sdata, const float* left, const float* right, size_t len) {

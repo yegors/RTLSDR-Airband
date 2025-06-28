@@ -170,6 +170,8 @@ struct srt_stream_data {
 
     int payload_size;
 
+    bool mp3;
+
     bool continuous;
     const char* listen_address;
     const char* listen_port;
@@ -417,6 +419,7 @@ void udp_stream_shutdown(udp_stream_data* sdata);
 bool srt_stream_init(srt_stream_data* sdata, mix_modes mode, size_t len);
 void srt_stream_write(srt_stream_data* sdata, const float* data, size_t len);
 void srt_stream_write(srt_stream_data* sdata, const float* data_left, const float* data_right, size_t len);
+void srt_stream_send_bytes(srt_stream_data* sdata, const unsigned char* data, size_t len);
 void srt_stream_shutdown(srt_stream_data* sdata);
 
 #ifdef WITH_PULSEAUDIO

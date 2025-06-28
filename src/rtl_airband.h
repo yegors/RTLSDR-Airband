@@ -168,6 +168,8 @@ struct srt_stream_data {
     float* stereo_buffer;
     size_t stereo_buffer_len;
 
+    int payload_size;
+
     bool continuous;
     const char* listen_address;
     const char* listen_port;

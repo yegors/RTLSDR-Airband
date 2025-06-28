@@ -266,6 +266,26 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
                 cerr << "missing listen_port\n";
                 error();
             }
+
+            if (outs[o].exists("format")) {
+                const char* fmt = outs[o]["format"];
+                if (!strcmp(fmt, "mp3")) {
+                    sdata->mp3 = true;
+                    channel->outputs[oo].has_mp3_output = true;
+                } else if (!strcmp(fmt, "raw")) {
+                    sdata->mp3 = false;
+                } else {
+                    if (parsing_mixers) {
+                        cerr << "Configuration error: mixers.[" << i << "] outputs.[" << o << "]: ";
+                    } else {
+                        cerr << "Configuration error: devices.[" << i << "] channels.[" << j << "] outputs.[" << o << "]: ";
+                    }
+                    cerr << "invalid SRT format, must be 'raw' or 'mp3'\n";
+                    error();
+                }
+            } else {
+                sdata->mp3 = false;
+            }
 #ifdef WITH_PULSEAUDIO
         } else if (!strncmp(outs[o]["type"], "pulse", 5)) {
             channel->outputs[oo].data = XCALLOC(1, sizeof(struct pulse_data));

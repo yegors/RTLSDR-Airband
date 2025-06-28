@@ -574,10 +574,24 @@ void process_outputs(channel_t* channel, int cur_scan_freq) {
             if (sdata->continuous == false && channel->axcindicate == NO_SIGNAL)
                 continue;
 
-            if (channel->mode == MM_MONO) {
-                srt_stream_write(sdata, channel->waveout, (size_t)WAVE_BATCH * sizeof(float));
+            if (sdata->mp3) {
+                const auto& lame = channel->outputs[k].lame;
+                const auto& lamebuf = channel->outputs[k].lamebuf;
+                int mp3_bytes = lame_encode_buffer_ieee_float(
+                    lame, channel->waveout,
+                    (channel->mode == MM_STEREO ? channel->waveout_r : NULL),
+                    WAVE_BATCH, lamebuf, LAMEBUF_SIZE);
+                if (mp3_bytes < 0) {
+                    log(LOG_WARNING, "lame_encode_buffer_ieee_float: %d\n", mp3_bytes);
+                } else if (mp3_bytes > 0) {
+                    srt_stream_send_bytes(sdata, lamebuf, mp3_bytes);
+                }
             } else {
-                srt_stream_write(sdata, channel->waveout, channel->waveout_r, (size_t)WAVE_BATCH * sizeof(float));
+                if (channel->mode == MM_MONO) {
+                    srt_stream_write(sdata, channel->waveout, (size_t)WAVE_BATCH * sizeof(float));
+                } else {
+                    srt_stream_write(sdata, channel->waveout, channel->waveout_r, (size_t)WAVE_BATCH * sizeof(float));
+                }
             }
 
 #ifdef WITH_PULSEAUDIO

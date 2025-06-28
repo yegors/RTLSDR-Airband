@@ -40,6 +40,12 @@ bool srt_stream_init(srt_stream_data* sdata, mix_modes mode, size_t len) {
         return false;
     }
 
+    int len_tmp = sizeof(sdata->payload_size);
+    if (srt_getsockopt(sdata->listen_socket, 0, SRTO_PAYLOADSIZE,
+                       &sdata->payload_size, &len_tmp) == SRT_ERROR) {
+        sdata->payload_size = SRT_LIVE_DEF_PLSIZE;
+    }
+
     int blocking = 0;
     srt_setsockopt(sdata->listen_socket, 0, SRTO_SNDSYN, &blocking, sizeof(blocking));
     srt_setsockopt(sdata->listen_socket, 0, SRTO_RCVSYN, &blocking, sizeof(blocking));
@@ -92,17 +98,27 @@ void srt_stream_write(srt_stream_data* sdata, const float* data, size_t len) {
 
     srt_stream_accept(sdata);
     for (auto it = sdata->clients.begin(); it != sdata->clients.end();) {
-        int ret = srt_send(*it, (const char*)data, (int)len);
-        if (ret == SRT_ERROR) {
-            int serr;
-            srt_getlasterror(&serr);
-            if (serr != SRT_EASYNCSND) {
-                srt_close(*it);
-                it = sdata->clients.erase(it);
-                continue;
+        const char* ptr = (const char*)data;
+        size_t remaining = len;
+        while (remaining > 0) {
+            int chunk = remaining > (size_t)sdata->payload_size ? sdata->payload_size : remaining;
+            int ret = srt_send(*it, ptr, chunk);
+            if (ret == SRT_ERROR) {
+                int serr;
+                srt_getlasterror(&serr);
+                if (serr != SRT_EASYNCSND) {
+                    srt_close(*it);
+                    it = sdata->clients.erase(it);
+                    goto next_client;
+                }
             }
+            ptr += chunk;
+            remaining -= chunk;
         }
         ++it;
+        continue;
+    next_client:
+        ;
     }
 }
 

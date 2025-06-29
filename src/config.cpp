@@ -270,21 +270,23 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             if (outs[o].exists("format")) {
                 const char* fmt = outs[o]["format"];
                 if (!strcmp(fmt, "mp3")) {
-                    sdata->mp3 = true;
+                    sdata->format = SRT_STREAM_MP3;
                     channel->outputs[oo].has_mp3_output = true;
-                } else if (!strcmp(fmt, "raw")) {
-                    sdata->mp3 = false;
+                } else if (!strcmp(fmt, "raw") || !strcmp(fmt, "pcm")) {
+                    sdata->format = SRT_STREAM_PCM;
+                } else if (!strcmp(fmt, "wav")) {
+                    sdata->format = SRT_STREAM_WAV;
                 } else {
                     if (parsing_mixers) {
                         cerr << "Configuration error: mixers.[" << i << "] outputs.[" << o << "]: ";
                     } else {
                         cerr << "Configuration error: devices.[" << i << "] channels.[" << j << "] outputs.[" << o << "]: ";
                     }
-                    cerr << "invalid SRT format, must be 'raw' or 'mp3'\n";
+                    cerr << "invalid SRT format, must be 'pcm', 'mp3' or 'wav'\n";
                     error();
                 }
             } else {
-                sdata->mp3 = false;
+                sdata->format = SRT_STREAM_PCM;
             }
 #ifdef WITH_PULSEAUDIO
         } else if (!strncmp(outs[o]["type"], "pulse", 5)) {

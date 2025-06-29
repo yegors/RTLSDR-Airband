@@ -157,6 +157,8 @@ lame_t airlame_init(mix_modes mixmode, int highpass, int lowpass) {
     lame_set_quality(lame, 7);
     lame_set_lowpassfreq(lame, lowpass);
     lame_set_highpassfreq(lame, highpass);
+    /* Disable the bit reservoir to reduce encoder latency */
+    lame_set_disable_reservoir(lame, 1);
     lame_set_out_samplerate(lame, MP3_RATE);
     if (mixmode == MM_STEREO) {
         lame_set_num_channels(lame, 2);
@@ -574,7 +576,7 @@ void process_outputs(channel_t* channel, int cur_scan_freq) {
             if (sdata->continuous == false && channel->axcindicate == NO_SIGNAL)
                 continue;
 
-            if (sdata->mp3) {
+            if (sdata->format == SRT_STREAM_MP3) {
                 const auto& lame = channel->outputs[k].lame;
                 const auto& lamebuf = channel->outputs[k].lamebuf;
                 int mp3_bytes = lame_encode_buffer_ieee_float(

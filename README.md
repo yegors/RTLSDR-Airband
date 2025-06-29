@@ -48,9 +48,11 @@ By default audio sent via the `srt` output is raw 32‑bit float PCM at
 ffplay -ac 1 -ar 8000 -analyzeduration 0 -probesize 32 -f f32le srt://<host>:<port>
 ```
 
-Setting `format = "mp3"` on the output encodes the audio using libmp3lame
-before sending it. In this mode standard players (including VLC) can open
-`srt://<host>:<port>` directly without specifying any parameters.
+Setting `format = "mp3"` encodes the audio using libmp3lame.  When
+`format = "wav"` a simple WAV header is sent before the audio stream
+allowing players such as VLC to connect without any additional
+parameters.  If omitted or set to `pcm` the stream is raw 32‑bit float
+PCM and clients must specify the format as shown above.
 
 ## Credits and thanks
 

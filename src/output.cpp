@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <vorbis/vorbisenc.h>
 
@@ -319,6 +320,8 @@ static void close_file(output_t* output) {
         return;
     }
 
+    double duration_sec = delta_sec(&fdata->open_time, &fdata->last_write_time);
+
     // close all mp3 files for every output that has a lame context
     if (fdata->type == O_FILE && fdata->f && output->lame) {
         int encoded = lame_encode_flush_nogap(output->lame, output->lamebuf, LAMEBUF_SIZE);
@@ -339,7 +342,31 @@ static void close_file(output_t* output) {
     if (fdata->f) {
         fclose(fdata->f);
         fdata->f = NULL;
-        rename_if_exists(fdata->file_path_tmp.c_str(), fdata->file_path.c_str());
+        bool keep = true;
+        if (fdata->split_on_transmission && fdata->min_rx_seconds > 0.0 && duration_sec < fdata->min_rx_seconds) {
+            keep = false;
+        }
+
+        if (keep) {
+            rename_if_exists(fdata->file_path_tmp.c_str(), fdata->file_path.c_str());
+            if (fdata->split_on_transmission && !fdata->post_write_script.empty()) {
+                pid_t pid = fork();
+                if (pid < 0) {
+                    log(LOG_ERR, "Cannot fork for post_write_script: %s\n", strerror(errno));
+                } else if (pid == 0) {
+                    pid_t pid2 = fork();
+                    if (pid2 == 0) {
+                        execl("/bin/sh", "sh", fdata->post_write_script.c_str(), fdata->file_path.c_str(), (char*)NULL);
+                        _exit(1);
+                    }
+                    _exit(0);
+                } else {
+                    waitpid(pid, NULL, 0);
+                }
+            }
+        } else {
+            unlink(fdata->file_path_tmp.c_str());
+        }
     }
     fdata->file_path.clear();
     fdata->file_path_tmp.clear();

@@ -121,6 +121,17 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             fdata->append = (!outs[o].exists("append")) || (bool)(outs[o]["append"]);
             fdata->split_on_transmission = outs[o].exists("split_on_transmission") ? (bool)(outs[o]["split_on_transmission"]) : false;
             fdata->include_freq = outs[o].exists("include_freq") ? (bool)(outs[o]["include_freq"]) : false;
+            if (fdata->split_on_transmission) {
+                fdata->min_rx_seconds = outs[o].exists("min_rx_seconds") ? (double)(outs[o]["min_rx_seconds"]) : 0.0;
+                if (outs[o].exists("post_write_script")) {
+                    fdata->post_write_script = outs[o]["post_write_script"].c_str();
+                }
+            } else {
+                if (outs[o].exists("min_rx_seconds") || outs[o].exists("post_write_script")) {
+                    cerr << "Configuration error: devices.[" << i << "] channels.[" << j << "] outputs.[" << o << "]: min_rx_seconds and post_write_script require split_on_transmission\n";
+                    error();
+                }
+            }
 
             channel->outputs[oo].has_mp3_output = true;
 
@@ -159,6 +170,8 @@ static int parse_outputs(libconfig::Setting& outs, channel_t* channel, int i, in
             fdata->append = (!outs[o].exists("append")) || (bool)(outs[o]["append"]);
             fdata->split_on_transmission = outs[o].exists("split_on_transmission") ? (bool)(outs[o]["split_on_transmission"]) : false;
             fdata->include_freq = outs[o].exists("include_freq") ? (bool)(outs[o]["include_freq"]) : false;
+            fdata->min_rx_seconds = 0.0;
+            fdata->post_write_script.clear();
             channel->needs_raw_iq = channel->has_iq_outputs = 1;
 
             if (fdata->continuous && fdata->split_on_transmission) {

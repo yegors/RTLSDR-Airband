@@ -32,28 +32,6 @@ radios are now supported as well.
 
 User's manual is now on the [wiki](https://github.com/rtl-airband/RTLSDR-Airband/wiki).
 
-## Optional dependencies
-
-The SRT output feature requires the development files for `libsrt`.
-When building with CMake leave the `-DSRT` option enabled (default) and
-ensure that `pkg-config` can locate the `srt` library. If the library is
-missing the build system will automatically disable SRT support.
-
-### SRT streaming
-
-By default audio sent via the `srt` output is raw 32‑bit float PCM at
-8&nbsp;kHz. A typical client is `ffplay`:
-
-```
-ffplay -ac 1 -ar 8000 -analyzeduration 0 -probesize 32 -f f32le srt://<host>:<port>
-```
-
-Setting `format = "mp3"` encodes the audio using libmp3lame.  When
-`format = "wav"` a simple WAV header is sent before the audio stream
-allowing players such as VLC to connect without any additional
-parameters.  If omitted or set to `pcm` the stream is raw 32‑bit float
-PCM and clients must specify the format as shown above.
-
 ## Credits and thanks
 
 I hereby express my gratitude to everybody who helped with the development and testing

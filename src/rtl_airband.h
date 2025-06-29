@@ -145,6 +145,8 @@ struct file_data {
     bool append;
     bool split_on_transmission;
     bool include_freq;
+    double min_rx_seconds;
+    std::string post_write_script;
     timeval open_time;
     timeval last_write_time;
     FILE* f;

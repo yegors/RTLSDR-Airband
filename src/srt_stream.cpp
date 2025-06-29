@@ -1,11 +1,11 @@
 #include <arpa/inet.h>
+#include <srt/logging_api.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <vector>
-#include <stdint.h>
-#include <stdlib.h>
-#include <srt/logging_api.h>
 
 #include "rtl_airband.h"
 
@@ -60,8 +60,7 @@ static void srt_stream_send(srt_stream_data* sdata, const char* data, size_t len
         }
         ++it;
         continue;
-    next_client:
-        ;
+    next_client:;
     }
 }
 
@@ -96,8 +95,7 @@ bool srt_stream_init(srt_stream_data* sdata, mix_modes mode, size_t len) {
     }
 
     int len_tmp = sizeof(sdata->payload_size);
-    if (srt_getsockopt(sdata->listen_socket, 0, SRTO_PAYLOADSIZE,
-                       &sdata->payload_size, &len_tmp) == SRT_ERROR) {
+    if (srt_getsockopt(sdata->listen_socket, 0, SRTO_PAYLOADSIZE, &sdata->payload_size, &len_tmp) == SRT_ERROR) {
         sdata->payload_size = SRT_LIVE_DEF_PLSIZE;
     }
 
@@ -146,7 +144,8 @@ static void srt_stream_send_header(srt_stream_data* sdata, srt_client& client) {
 
     char header[44];
     memcpy(header, "RIFF", 4);
-    uint32_t sz = 0xffffffffu; /* unknown length */
+    /* use 0 for indefinite length so players avoid warnings */
+    uint32_t sz = 0u;
     memcpy(header + 4, &sz, 4);
     memcpy(header + 8, "WAVEfmt ", 8);
     uint32_t fmt_size = 16;
@@ -186,7 +185,7 @@ static void srt_stream_accept(srt_stream_data* sdata) {
         srt_setsockopt(s, 0, SRTO_TSBPDMODE, &tsbpd, sizeof(tsbpd));
         int zero = 0;
         srt_setsockopt(s, 0, SRTO_LATENCY, &zero, sizeof(zero));
-        srt_client c{ s, false };
+        srt_client c{s, false};
         sdata->clients.push_back(c);
     }
 }

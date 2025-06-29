@@ -164,20 +164,35 @@ struct udp_stream_data {
     socklen_t dest_sockaddr_len;
 };
 
+enum srt_stream_format {
+    SRT_STREAM_PCM,
+    SRT_STREAM_MP3,
+    SRT_STREAM_WAV
+};
+
+struct srt_client {
+    SRTSOCKET sock;
+    bool header_sent;
+};
+
 struct srt_stream_data {
     float* stereo_buffer;
     size_t stereo_buffer_len;
 
+    int16_t* pcm_buffer;
+    size_t pcm_buffer_len;
+
     int payload_size;
 
-    bool mp3;
+    srt_stream_format format;
+    mix_modes mode;
 
     bool continuous;
     const char* listen_address;
     const char* listen_port;
 
     SRTSOCKET listen_socket;
-    std::vector<SRTSOCKET> clients;
+    std::vector<srt_client> clients;
 };
 
 #ifdef WITH_PULSEAUDIO
